@@ -1,0 +1,1 @@
+{"metric/gamma_0":-5,"loss":12.228062629699707,"metric/bpd":12.228062629699707,"_timestamp":1.762776554379105e+09,"metric/latent_loss":0.0015682611847296357,"_step":9,"metric/gamma_1":5,"_runtime":7,"metric/loss_recon":5.346339225769043,"metric/diff_loss":6.880155563354492,"_wandb":{"runtime":7},"epoch":9}

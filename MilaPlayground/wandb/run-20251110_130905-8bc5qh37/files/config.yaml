@@ -1,0 +1,70 @@
+_wandb:
+    value:
+        cli_version: 0.22.3
+        e:
+            01zardmy3c370bbdd9t3nh3eky9kt07p:
+                codePath: MilaPlayground/wandB_example.py
+                codePathLocal: wandB_example.py
+                cpu_count: 24
+                cpu_count_logical: 24
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "76817485824"
+                        used: "6962524160"
+                email: s215114@dtu.dk
+                executable: /zhome/68/a/168414/my02516/bin/python
+                git:
+                    commit: bf2afb0813d37f545172a232890ea6bf7d99911a
+                    remote: https://github.com/zton0009/vdm-02456.git
+                gpu: Tesla V100-PCIE-32GB
+                gpu_count: 2
+                gpu_nvidia:
+                    - architecture: Volta
+                      cudaCores: 5120
+                      memoryTotal: "34359738368"
+                      name: Tesla V100-PCIE-32GB
+                      uuid: GPU-65ffa86a-b49f-c40b-9c77-64cb8203d149
+                    - architecture: Volta
+                      cudaCores: 5120
+                      memoryTotal: "34359738368"
+                      name: Tesla V100-PCIE-32GB
+                      uuid: GPU-d59e969e-35f2-2924-80ae-9bcb2ab6b025
+                host: n-62-11-12
+                memory:
+                    total: "404874792960"
+                os: Linux-6.1.155-1.el9.elrepo.x86_64-x86_64-with-glibc2.34
+                program: /zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground/wandB_example.py
+                python: CPython 3.9.21
+                root: /zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground
+                startedAt: "2025-11-10T12:09:05.633567Z"
+                writerId: 01zardmy3c370bbdd9t3nh3eky9kt07p
+        m: []
+        python_version: 3.9.21
+        t:
+            "1":
+                - 1
+                - 41
+            "2":
+                - 1
+                - 41
+            "3":
+                - 16
+            "4": 3.9.21
+            "5": 0.22.3
+            "12": 0.22.3
+            "13": linux-x86_64
+architecture:
+    value: DummyDenoiser
+batch_size:
+    value: 2
+dataset:
+    value: toy
+epochs:
+    value: 10
+image_size:
+    value: 8
+learning_rate:
+    value: 0.001
+noise_schedule:
+    value: fixed_linear
