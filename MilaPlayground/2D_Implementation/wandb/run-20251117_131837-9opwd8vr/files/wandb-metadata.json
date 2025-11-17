@@ -1,0 +1,47 @@
+{
+  "os":  "Linux-6.1.158-1.el9.elrepo.x86_64-x86_64-with-glibc2.34",
+  "python":  "CPython 3.9.21",
+  "startedAt":  "2025-11-17T12:18:37.669957Z",
+  "program":  "/zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground/2D_Implementation/vdm_2D_wandB.py",
+  "codePath":  "MilaPlayground/2D_Implementation/vdm_2D_wandB.py",
+  "codePathLocal":  "vdm_2D_wandB.py",
+  "git":  {
+    "remote":  "https://github.com/zton0009/vdm-02456.git",
+    "commit":  "1db92d7efb5ee2756cc16e318b3b80c3b986b708"
+  },
+  "email":  "s215114@dtu.dk",
+  "root":  "/zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground/2D_Implementation",
+  "host":  "n-62-11-12",
+  "executable":  "/zhome/68/a/168414/my02516/bin/python",
+  "cpu_count":  24,
+  "cpu_count_logical":  24,
+  "gpu":  "Tesla V100-PCIE-32GB",
+  "gpu_count":  2,
+  "disk":  {
+    "/":  {
+      "total":  "76817485824",
+      "used":  "6979899392"
+    }
+  },
+  "memory":  {
+    "total":  "404874788864"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "Tesla V100-PCIE-32GB",
+      "memoryTotal":  "34359738368",
+      "cudaCores":  5120,
+      "architecture":  "Volta",
+      "uuid":  "GPU-65ffa86a-b49f-c40b-9c77-64cb8203d149"
+    },
+    {
+      "name":  "Tesla V100-PCIE-32GB",
+      "memoryTotal":  "34359738368",
+      "cudaCores":  5120,
+      "architecture":  "Volta",
+      "uuid":  "GPU-d59e969e-35f2-2924-80ae-9bcb2ab6b025"
+    }
+  ],
+  "cudaVersion":  "13.0",
+  "writerId":  "ln9joy2ybiy1k03wsx0cekftmvj4rh9z"
+}

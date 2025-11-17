@@ -1,0 +1,9 @@
+Step 0: Loss = 80291.2344
+Traceback (most recent call last):
+  File "/zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground/2D_Implementation/vdm_2D_wandB.py", line 224, in <module>
+    wandb.log({"gamma_curve": wandb.Image(plt.plot(t_vis, gamma_vis))})
+  File "/zhome/68/a/168414/my02516/lib64/python3.9/site-packages/wandb/sdk/data_types/image.py", line 277, in __init__
+    self._initialize_from_data(data_or_path, mode, file_type, normalize)
+  File "/zhome/68/a/168414/my02516/lib64/python3.9/site-packages/wandb/sdk/data_types/image.py", line 434, in _initialize_from_data
+    if data.ndim > 2:  # type: ignore [union-attr]
+AttributeError: 'list' object has no attribute 'ndim'

@@ -1,0 +1,63 @@
+_wandb:
+    value:
+        cli_version: 0.22.3
+        e:
+            8z4m4vdfsepsoaubnooxoxbothf8xxcd:
+                codePath: MilaPlayground/2D_Implementation/vdm_2D_wandB.py
+                codePathLocal: vdm_2D_wandB.py
+                cpu_count: 24
+                cpu_count_logical: 24
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "76817485824"
+                        used: "6979923968"
+                email: s215114@dtu.dk
+                executable: /zhome/68/a/168414/my02516/bin/python
+                git:
+                    commit: 1db92d7efb5ee2756cc16e318b3b80c3b986b708
+                    remote: https://github.com/zton0009/vdm-02456.git
+                gpu: Tesla V100-PCIE-32GB
+                gpu_count: 2
+                gpu_nvidia:
+                    - architecture: Volta
+                      cudaCores: 5120
+                      memoryTotal: "34359738368"
+                      name: Tesla V100-PCIE-32GB
+                      uuid: GPU-65ffa86a-b49f-c40b-9c77-64cb8203d149
+                    - architecture: Volta
+                      cudaCores: 5120
+                      memoryTotal: "34359738368"
+                      name: Tesla V100-PCIE-32GB
+                      uuid: GPU-d59e969e-35f2-2924-80ae-9bcb2ab6b025
+                host: n-62-11-12
+                memory:
+                    total: "404874788864"
+                os: Linux-6.1.158-1.el9.elrepo.x86_64-x86_64-with-glibc2.34
+                program: /zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground/2D_Implementation/vdm_2D_wandB.py
+                python: CPython 3.9.21
+                root: /zhome/68/a/168414/DeepLearning/vdm-02456/MilaPlayground/2D_Implementation
+                startedAt: "2025-11-17T12:21:17.048700Z"
+                writerId: 8z4m4vdfsepsoaubnooxoxbothf8xxcd
+        m: []
+        python_version: 3.9.21
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 16
+            "4": 3.9.21
+            "5": 0.22.3
+            "12": 0.22.3
+            "13": linux-x86_64
+"N":
+    value: 1024
+hidden_units:
+    value: 512
+learning_rate:
+    value: 0.001
+num_steps:
+    value: 20000
