@@ -1,74 +1,81 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from VDM_our_implementation import VDM  # import your implementation
+from UNetModel import UNet
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 import torch.optim as optim
-import numpy as np
-import matplotlib.pyplot as plt
-from vdm_2d import Model, loss_fn
-import torchvision
-import torchvision.transforms as transforms
-from torch.utils.data import TensorDataset, DataLoader
 
-# ---------------------------
-# Hyperparameters
-# ---------------------------
-N = 1024
-init_gamma_0 = -13.3
-init_gamma_1 = 5.
-hidden_units = 512
-T_train = 0
-vocab_size = 256
-learning_rate = 1e-3
-num_train_steps = 20000  
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Loading Data
 
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),  # subtract 0.5 and divide by 0.5
-    ]
+
+transform = transforms.Compose([
+    transforms.ToTensor(),   # -> [0,1]
+])
+
+train_dataset = datasets.CIFAR10(
+    root="./data",
+    train=True,
+    download=True,
+    transform=transform
 )
 
-batch_size = 64  # both for training and testing
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=64,
+    shuffle=True,
+    num_workers=4,
+    pin_memory=True
+)
 
-# Load datasets
-train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
-test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, drop_last=True)
+image_shape = (3, 32, 32)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model = UNet(in_channels=3).to(device)
+
+vdm = VDM(
+    model=model,
+    image_shape=image_shape,
+    gamma_min=-5.0,
+    gamma_max=5.0,
+).to(device)
+
+optimizer = optim.AdamW(model.parameters(), lr=1e-4)
 
 
-# Flatten images for VDM
-def preprocess_batch(batch):
-    x, _ = batch
-    B, C, H, W = x.shape
-    x_flat = x.permute(0, 2, 3, 1).reshape(B, -1) * 255.0  # scale to 0-255
-    return x_flat.to(device)
+# for epoch in range(epochs):
+#     for batch_idx, (x, _) in enumerate(train_loader):
+#         x = x.to(device)
 
+#         optimizer.zero_grad()
+        
+#         loss = vdm.forward(x)      # your VDM takes only images
+#         loss.backward()
 
+#         optimizer.step()
+#         # calculate metrics to show the user
+#         avg_loss += loss / len(train_loader)
 
-# ---------------------------
-# Training
-# ---------------------------
-input_dim = 32 * 32 * 3  # 3072
-model = Model(input_dim=input_dim, hidden_units=hidden_units).to(device)
-optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-# model = Model(input_dim=2, hidden_units=hidden_units).to(device)
-# optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+#     if batch_idx % 100 == 0:
+#         print(f"Epoch {epoch} | Batch {batch_idx} | Loss = {avg_loss.item():.4f}")
+num_epochs=5
+for epoch in range(num_epochs):
+    running_loss = 0.0
 
-losses = []
-for step, batch in enumerate(train_loader):
-    if step >= num_train_steps:
-        break
-    model.train()
-    optimizer.zero_grad()
-    x_flat = preprocess_batch(batch)
-    loss, metrics = loss_fn(model, x_flat)
-    loss.backward()
-    optimizer.step()
-    losses.append(loss.item())
-    if step % 100 == 0:
-        print(f"Step {step}, Loss: {loss.item():.4f}")
+    for batch_idx, (x, _) in enumerate(train_loader):
+        x = x.to(device)
 
-print("Training finished!")
+        optimizer.zero_grad()
+        loss = vdm.forward(x)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()  # accumulate batch loss
+
+    # compute average loss for the epoch
+    avg_loss = running_loss / len(train_loader)
+    
+
+    print(f"Epoch {epoch+1}/{num_epochs} | Average Loss: {avg_loss:.4f}")
