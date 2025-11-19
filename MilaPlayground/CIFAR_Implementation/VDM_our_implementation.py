@@ -120,6 +120,47 @@ class VDM(nn.Module):
     #Then sums over features (D) and vocab dimension to get a single scalar per batch example.
 
 
+    def sample(self, batch_size, n_sample_steps=50, clip_samples=True):
+        """
+        Generate samples from the trained VDM model.
+        
+        Args:
+            batch_size (int): number of samples to generate
+            n_sample_steps (int): number of reverse diffusion steps
+            clip_samples (bool): whether to clip samples to [-1,1] for visualization
+
+        Returns:
+            x: [B,C,H,W] sampled images
+        """
+        device = self.device
+        B, C, H, W = batch_size, *self.image_shape
+        # Start from standard normal noise
+        x_t = torch.randn(batch_size, *self.image_shape, device=device)
+        
+        # Linear time steps from 1 to 0
+        times = torch.linspace(1.0, 0.0, n_sample_steps, device=device)
+
+        for t in times:
+            t_batch = torch.full((batch_size,), t, device=device)
+            gamma_t = self.gamma(t_batch)[:, None, None, None]
+
+            # Predict noise using the model
+            with torch.no_grad():
+                pred_noise = self.model(x_t, gamma_t)
+
+            # Compute alpha and sigma
+            alpha = torch.sqrt(torch.sigmoid(-gamma_t))
+            sigma = torch.sqrt(torch.sigmoid(gamma_t))
+
+            # Reverse diffusion step: simple ancestral step
+            x0_pred = (x_t - sigma * pred_noise) / alpha
+            x_t = alpha * x0_pred + sigma * pred_noise  # update x_t
+
+            if clip_samples:
+                x_t = x_t.clamp(-1, 1)
+
+        return x_t
+
 
 
     def forward(self, x, *, noise=None):

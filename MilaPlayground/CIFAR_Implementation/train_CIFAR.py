@@ -28,7 +28,20 @@ train_loader = DataLoader(
     num_workers=4,
     pin_memory=True
 )
+val_dataset = datasets.CIFAR10(
+    root="./data",
+    train=False,       # test set
+    download=True,
+    transform=transforms.ToTensor()  # same preprocessing as training
+)
 
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=64,
+    shuffle=False,      # no shuffle for validation
+    num_workers=4,
+    pin_memory=True
+)
 image_shape = (3, 32, 32)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -44,22 +57,6 @@ vdm = VDM(
 
 optimizer = optim.AdamW(model.parameters(), lr=1e-4)
 
-
-# for epoch in range(epochs):
-#     for batch_idx, (x, _) in enumerate(train_loader):
-#         x = x.to(device)
-
-#         optimizer.zero_grad()
-        
-#         loss = vdm.forward(x)      # your VDM takes only images
-#         loss.backward()
-
-#         optimizer.step()
-#         # calculate metrics to show the user
-#         avg_loss += loss / len(train_loader)
-
-#     if batch_idx % 100 == 0:
-#         print(f"Epoch {epoch} | Batch {batch_idx} | Loss = {avg_loss.item():.4f}")
 num_epochs=5
 for epoch in range(num_epochs):
     running_loss = 0.0
@@ -79,3 +76,23 @@ for epoch in range(num_epochs):
     
 
     print(f"Epoch {epoch+1}/{num_epochs} | Average Loss: {avg_loss:.4f}")
+
+vdm.eval()
+mse_losses = []
+
+with torch.no_grad():
+    for x, _ in val_loader:  # validation DataLoader
+        x = x.to(device)
+        # sample images from the model
+        samples = vdm.sample(batch_size=x.size(0), n_sample_steps=50)
+        
+        # rescale x to [-1,1] to match your VDM normalization if needed
+        x_encoded = vdm.data_encode(x)
+
+        # compute MSE per batch
+        mse = ((samples - x_encoded) ** 2).mean()
+        mse_losses.append(mse.item())
+
+# average MSE over the validation set
+val_mse = sum(mse_losses) / len(mse_losses)
+print(f"Validation MSE: {val_mse:.6f}")
