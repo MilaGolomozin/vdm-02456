@@ -51,11 +51,19 @@ model = UNet(in_channels=3).to(device)
 vdm = VDM(
     model=model,
     image_shape=image_shape,
-    gamma_min=-5.0,
+    gamma_min=-13.3,
     gamma_max=5.0,
 ).to(device)
 
-optimizer = optim.AdamW(model.parameters(), lr=1e-4)
+#optimizer = optim.AdamW(model.parameters(), lr=1e-4)
+optimizer = optim.AdamW(
+    model.parameters(),
+    lr=5e-4,
+    betas=(0.9, 0.99),
+    weight_decay=0.001,
+    eps=1e-8
+)
+
 # EMA wrapper (same purpose as original implementation)
 ema = EMA(model, beta=0.9999)   # update after every step
 
@@ -73,12 +81,12 @@ def evaluate_vdm(vdm, dataloader, device):
     total_loss = 0.0
     total_batches = 0
 
-    with torch.no_grad():
+    with torch.enable_grad():
         for x, _ in dataloader:
             x = x.to(device)
 
             # vdm(x) returns the negative ELBO
-            loss = vdm(x)
+            loss, metrics = vdm(x)
 
             total_loss += loss.item()
             total_batches += 1
@@ -86,7 +94,7 @@ def evaluate_vdm(vdm, dataloader, device):
     return total_loss / total_batches
 
 
-num_epochs=5
+num_epochs=20
 for epoch in range(num_epochs):
     running_loss = 0.0
 
@@ -94,7 +102,7 @@ for epoch in range(num_epochs):
         x = x.to(device)
 
         optimizer.zero_grad()
-        loss = vdm.forward(x)
+        loss, metrics = vdm.forward(x)
         loss.backward()
         optimizer.step()
 
@@ -105,6 +113,8 @@ for epoch in range(num_epochs):
     
 
     print(f"Epoch {epoch+1}/{num_epochs} | Average Loss: {avg_loss:.4f}")
+    for k, v in metrics.items():
+        print(f"{k:15s}: {v}")
 
     # ----------------------------------
     # Evaluation (original-like behavior)
@@ -121,8 +131,9 @@ for epoch in range(num_epochs):
         gamma_max=vdm.gamma_max,
     ).to(device)
 
-    val_elbo = evaluate_vdm(vdm_ema, val_loader, device)
+    val_elbo = evaluate_vdm(vdm, val_loader, device)
     print(f"→ Validation ELBO (EMA model): {val_elbo:.4f}")
+    
 
 
 

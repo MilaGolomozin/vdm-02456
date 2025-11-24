@@ -13,6 +13,7 @@ class LinearGammaSchedule(nn.Module):
         super().__init__()
         self.gamma_min = gamma_min
         self.gamma_max = gamma_max
+        
 
     def forward(self, t):
         """
@@ -82,7 +83,7 @@ class VDM(nn.Module):
     #sampling t
     #######################
     def sample_times(self, batch_size):
-        times = torch.rand(batch_size, device=self.device)
+        times = torch.rand(batch_size, device=self.device, requires_grad=True)
         return times
 
 
@@ -94,36 +95,99 @@ class VDM(nn.Module):
     # to the domain (-1,1).
     # Rounding here just a safeguard to ensure the input is discrete
     # (although typically, x is a discrete variable such as uint8)
-        x = x.round()
-        x_mean = x.mean(dim=0)
-        x_std = x.std(dim=0) + 1e-6  # avoid div by zero
-        return (x - x_mean) / x_std
+        # x = x.round()
+        # x_mean = x.mean(dim=0)
+        # x_std = x.std(dim=0) + 1e-6  # avoid div by zero
+        return x * 2 - 1
 
 
 
+
+    # def data_decode(self, z_0_rescaled, gamma_0):
+    #     # z_0_rescaled: [B,D], gamma_0: scalar or [B]
+    #     #B, D = z_0_rescaled.shape
+    #     B = z_0_rescaled.shape[0]
+    #     D = np.prod(z_0_rescaled.shape[1:])   # flatten channels & spatial dims
+    #     z_flat = z_0_rescaled.view(B, D)
+    #     x_vals = torch.arange(vocab_size, device=z_0_rescaled.device).float()[:, None]  # [vocab_size,1]
+    #     x_vals = x_vals.repeat(1, D)  # [vocab_size, D]
+    #     x_vals = self.data_encode(x_vals).T.unsqueeze(0)  # [1,D,vocab_size]
+    #     inv_stdev = torch.exp(-0.5 * gamma_0[..., None]) #this is basically the inverse of the standard deviation which measures how "wide" the distribution is. if 1/std is small logits are flatter (less sharp distribution). if 1/std is large -> logits are sharper (more peaked distrib)
+    # #    #In Gaussian likelihoods, you always scale the residual by the inverse of the standard deviation
+    # #   #If the true σ is large, the same difference x−μ should be considered less surprising, so the probability should be higher.
+    # #   #If σ is small, even a small difference x−μ should drastically reduce the probability
+    #     logits = -0.5 * ((z_flat[..., None] - x_vals) * inv_stdev) ** 2
+    #     return F.log_softmax(logits, dim=-1) #Softmax normalizes the logits across discrete values (vocab_size dimension), turning them into probabilities that sum to 1.
+
+
+    # def data_logprob(self, x, z_0_rescaled, gamma_0):
+    #     #x = x.round().long()
+    #     x_flat = x.view(x.shape[0], -1).round().long()  # flatten batch
+    #     x_onehot = F.one_hot(x_flat, num_classes=vocab_size).float()
+    #     logprobs = self.data_decode(z_0_rescaled, gamma_0)
+    #     #breakpoint()
+    #     return torch.sum(x_onehot * logprobs, dim=(1,2))  #Multiplies the one-hot vectors by the logits or log-probabilities → selects the probability corresponding to the true symbol.
+    # #Then sums over features (D) and vocab dimension to get a single scalar per batch example.
 
     def data_decode(self, z_0_rescaled, gamma_0):
-        # z_0_rescaled: [B,D], gamma_0: scalar or [B]
-        B, D = z_0_rescaled.shape
-        x_vals = torch.arange(vocab_size, device=z_0_rescaled.device).float()[:, None]  # [vocab_size,1]
-        x_vals = x_vals.repeat(1, D)  # [vocab_size, D]
-        x_vals = self.data_encode(x_vals).T.unsqueeze(0)  # [1,D,vocab_size]
-        inv_stdev = torch.exp(-0.5 * gamma_0[..., None]) #this is basically the inverse of the standard deviation which measures how "wide" the distribution is. if 1/std is small logits are flatter (less sharp distribution). if 1/std is large -> logits are sharper (more peaked distrib)
-    #    #In Gaussian likelihoods, you always scale the residual by the inverse of the standard deviation
-    #   #If the true σ is large, the same difference x−μ should be considered less surprising, so the probability should be higher.
-    #   #If σ is small, even a small difference x−μ should drastically reduce the probability
-        logits = -0.5 * ((z_0_rescaled[..., None] - x_vals) * inv_stdev) ** 2
-        return F.log_softmax(logits, dim=-1) #Softmax normalizes the logits across discrete values (vocab_size dimension), turning them into probabilities that sum to 1.
-
-
+        """
+        Compute log p(x | z_0) for discrete data.
+        Uses discretized Gaussian likelihood.
+        """
+        B = z_0_rescaled.shape[0]
+        D = np.prod(z_0_rescaled.shape[1:])
+        z_flat = z_0_rescaled.view(B, D)
+        
+        # Discretized values in [-1, 1]
+        # Map 0-255 → [-1, 1]
+        x_vals = torch.arange(256, device=z_0_rescaled.device).float()
+        x_vals = (x_vals / 127.5) - 1.0  # [0,255] → [-1,1]
+        x_vals = x_vals.view(1, 1, 256)  # [1, 1, 256]
+        
+        # Compute bin edges for discretized Gaussian
+        bin_width = 2.0 / 255  # width of each discrete bin
+        x_upper = x_vals + bin_width / 2
+        x_lower = x_vals - bin_width / 2
+        
+        # Handle boundaries
+        x_upper[:, :, -1] = float('inf')
+        x_lower[:, :, 0] = float('-inf')
+        
+        # Standard deviation from gamma
+        sigma_0 = torch.sqrt(torch.sigmoid(gamma_0))
+        
+        # z_flat shape: [B, D], need [B, D, 1]
+        z_expanded = z_flat.unsqueeze(-1)  # [B, D, 1]
+        
+        # Compute CDF values for discretized likelihood
+        cdf_upper = torch.erf((x_upper - z_expanded) / (sigma_0 * np.sqrt(2)))
+        cdf_lower = torch.erf((x_lower - z_expanded) / (sigma_0 * np.sqrt(2)))
+        
+        # Log probabilities (with numerical stability)
+        log_probs = torch.log(torch.clamp((cdf_upper - cdf_lower) / 2, min=1e-12))
+        
+        return log_probs  # [B, D, 256]
+    
     def data_logprob(self, x, z_0_rescaled, gamma_0):
-        x = x.round().long()
-        x_onehot = F.one_hot(x, num_classes=vocab_size).float()
-        logprobs = self.data_decode(z_0_rescaled, gamma_0)
-        return torch.sum(x_onehot * logprobs, dim=(1,2))  #Multiplies the one-hot vectors by the logits or log-probabilities → selects the probability corresponding to the true symbol.
-    #Then sums over features (D) and vocab dimension to get a single scalar per batch example.
-
-
+        """
+        Compute log p(x | z_0) for the actual observed x.
+        """
+        B = x.shape[0]
+        D = np.prod(x.shape[1:])
+        
+        # Flatten x to [B, D]
+        x_flat = x.view(B, -1).long()
+        
+        # Get log probabilities for all values
+        log_probs = self.data_decode(z_0_rescaled, gamma_0)  # [B, D, 256]
+        
+        # Select the log probability for observed x
+        # Use gather: [B, D, 1] → [B, D]
+        selected_log_probs = torch.gather(log_probs, 2, x_flat.unsqueeze(-1)).squeeze(-1)
+        
+        # Sum over dimensions: [B, D] → [B]
+        return selected_log_probs.sum(dim=1)
+    
     def sample(self, batch_size, n_sample_steps=50, clip_samples=True):
         """
         Generate samples from the trained VDM model.
@@ -170,8 +234,11 @@ class VDM(nn.Module):
     def forward(self, x, *, noise=None):
         #breakpoint()
         bpd_factor = 1 / (np.prod(x.shape[1:]) * np.log(2)) #converts the loss into bits-per-dimension.This is standard in generative modeling to report likelihood per pixel in bits (Appendix C in VDM paper).
+        
         #making sure the input is from -1 to 1
-        x1=self.data_encode(x)
+        #x1=self.data_encode(x)
+        x1= x * 2 - 1
+        #breakpoint()
         # Sample from q(x_t | x_0) with random t.
         times = self.sample_times(x.shape[0]).requires_grad_(True)
         if noise is None:
@@ -187,6 +254,15 @@ class VDM(nn.Module):
         
         # Get dγ/dt analytically from your noise schedule
         gamma_grad = self.gamma_max -self.gamma_min
+        # # Should be:
+        
+        # gamma_grad = autograd.grad( 
+        #     gamma_t,  
+        #     times, 
+        #     grad_outputs=torch.ones_like(gamma_t),
+        #     create_graph=True,
+        #     retain_graph=True,
+        # )[0]
         
         # Final diffusion loss
         diffusion_loss = 0.5 * mse_loss * gamma_grad * bpd_factor
@@ -207,19 +283,50 @@ class VDM(nn.Module):
             # Compute log p(x | z_0) for all possible values of each pixel in x.
 
         # Reconstruction loss
-        eps_0 = torch.randn_like(x1)
+        # eps_0 = torch.randn_like(x1)
        
-        z_0_rescaled = x1 + torch.exp(0.5 * self.gamma_min) * eps_0
+        # z_0_rescaled = x1 + torch.exp(0.5 * self.gamma_min) * eps_0
         
-        # loss_recon = -self.data_logprob(x, z_0_rescaled, self.gamma_min)
-        # Gaussian log-likelihood: -0.5 * ||x - z_0||^2 / sigma_0^2 (ignoring constants)
-        sigma_0_sq = torch.sigmoid(self.gamma_min)
-        recon_mse = ((x1 - z_0_rescaled) ** 2).sum(dim=(1, 2, 3))
-        loss_recon = 0.5 * recon_mse / sigma_0_sq * bpd_factor
+        # # loss_recon = -self.data_logprob(x, z_0_rescaled, self.gamma_min)
+        # # Gaussian log-likelihood: -0.5 * ||x - z_0||^2 / sigma_0^2 (ignoring constants)
+        # sigma_0_sq = torch.sigmoid(self.gamma_min)
+        # recon_mse = ((x1 - z_0_rescaled) ** 2).sum(dim=(1, 2, 3))
+        # # Ensure x_flat is in integers 0-255
+        # x_discrete = (x * 255).round().clamp(0, 255).long()
+
+        # #loss_recon = -self.data_logprob(x_discrete, z_0_rescaled, self.gamma_min) * bpd_factor
+
+        # loss_recon = 0.5 * recon_mse / sigma_0_sq * bpd_factor
+
+        # # Get z_0 from the forward process
+        # z_0, gamma_0 = self.sample_q_t_0(x1, torch.zeros(x.shape[0], device=x.device))
+        # x_discrete = (x * 255).round().clamp(0, 255).long()
+        # loss_recon = -self.data_logprob(x_discrete, z_0, self.gamma_min) * bpd_factor
+        gamma_0 = self.gamma_min
+        alpha_0 = torch.sqrt(torch.sigmoid(-gamma_0))
+        
+        # Use the mean of q(z_0 | x) as the reconstruction point
+        z_0_mean = alpha_0 * x1
+        
+        # Discrete likelihood
+        x_discrete = (x * 255).round().clamp(0, 255).long()
+        loss_recon = -self.data_logprob(x_discrete, z_0_mean, gamma_0) * bpd_factor
+        
 
         # *** Overall loss in bpd. Shape (B, ).
         loss = diffusion_loss + latent_loss + loss_recon #this is the VLB the latent loss is the prior loss
-        return loss.mean()
+        
+        with torch.no_grad():
+            gamma_0 = self.gamma(torch.tensor([0.0], device=self.device))
+        metrics = {
+            "bpd": loss.mean(),
+            "diff_loss": diffusion_loss.mean(),
+            "latent_loss": latent_loss.mean(),
+            "loss_recon": loss_recon.mean(),
+            "gamma_0": gamma_0.item(),
+            "gamma_1": gamma_1.item(),
+        }
+        return loss.mean(), metrics
 
 
 
