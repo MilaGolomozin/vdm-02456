@@ -36,8 +36,12 @@ class VDM(nn.Module):
          # Store them directly for easy access
         # self.gamma_min = gamma_min
         # self.gamma_max = gamma_max
-        self.gamma_min = torch.tensor(gamma_min)
-        self.gamma_max = torch.tensor(gamma_max)
+        device = next(model.parameters()).device
+        self.gamma_min = torch.as_tensor(gamma_min, dtype=torch.float32, device=device)
+        self.gamma_max = torch.as_tensor(gamma_max, dtype=torch.float32, device=device)
+
+        # self.gamma_min = torch.tensor(gamma_min)
+        # self.gamma_max = torch.tensor(gamma_max)
 
         self.gamma = LinearGammaSchedule(gamma_min, gamma_max)
 
