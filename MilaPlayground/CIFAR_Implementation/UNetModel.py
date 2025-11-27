@@ -92,7 +92,7 @@ import math
 # Fourier features applied to latent
 # ----------------------------------
 class FourierFeatures(nn.Module):
-    def __init__(self, first=5.0, last=6.0, step=1.0):
+    def __init__(self, first=7.0, last=8.0, step=1.0): # paper lists nmin = 7, and nmax = 8
         super().__init__()
         self.freqs_exponent = torch.arange(first, last + 1e-8, step)
 
@@ -105,7 +105,7 @@ class FourierFeatures(nn.Module):
 
         # Compute (2pi * 2^n) for n in freqs.
         freqs_exponent = self.freqs_exponent.to(dtype=x.dtype, device=x.device)  # (F, )
-        freqs = 2.0**freqs_exponent * 2 * math.pi  # (F, )
+        freqs = 2.0**freqs_exponent * math.pi  # (F, ) // match the paper pi*2^n
         freqs = freqs.view(-1, *([1] * (x.dim() - 1)))  # (F, 1, 1, ...)
 
         # Compute (2pi * 2^n * x) for n in freqs.
