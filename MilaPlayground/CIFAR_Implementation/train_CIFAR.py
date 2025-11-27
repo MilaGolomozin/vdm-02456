@@ -7,6 +7,22 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import torch.optim as optim
 from ema_pytorch import EMA
+import wandb
+
+run = wandb.init(
+  project="VDM PyTorch CIFAR",
+  config={
+    "dataset": "CIFAR10",
+    "epochs": 20,
+    "learning_rate": 5e-4,
+    "batch_size": 64,
+    "image_size": 32,
+    "model": "UNet",
+    "gamma_min": -13.3,
+    "gamma_max": 5.0,
+  },
+)
+cfg = wandb.config
 
 
 
@@ -106,6 +122,12 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
+        # Log batch loss and metrics to W&B
+        wandb.log({
+            "train/loss_batch": loss.item(),
+            **{f"train/{k}": v for k, v in metrics.items()},
+        })
+
         running_loss += loss.item()  # accumulate batch loss
 
     # compute average loss for the epoch
@@ -115,6 +137,15 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs} | Average Loss: {avg_loss:.4f}")
     for k, v in metrics.items():
         print(f"{k:15s}: {v}")
+
+    
+    # Log epoch loss and learning rate to W&B
+    wandb.log({
+    "train/loss_epoch": avg_loss,
+    "val/elbo": val_elbo,
+    "epoch": epoch + 1,
+    "lr": optimizer.param_groups[0]["lr"],
+    })
 
     # ----------------------------------
     # Evaluation (original-like behavior)
@@ -133,6 +164,10 @@ for epoch in range(num_epochs):
 
     val_elbo = evaluate_vdm(vdm, val_loader, device)
     print(f"→ Validation ELBO (EMA model): {val_elbo:.4f}")
+
+# finish logging
+run.finish()
+    
     
 
 

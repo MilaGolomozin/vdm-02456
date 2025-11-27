@@ -89,6 +89,34 @@ import torch.nn.functional as F
 import math
 
 # ----------------------------------
+# Fourier features applied to latent
+# ----------------------------------
+class FourierFeatures(nn.Module):
+    def __init__(self, first=5.0, last=6.0, step=1.0):
+        super().__init__()
+        self.freqs_exponent = torch.arange(first, last + 1e-8, step)
+
+    @property
+    def num_features(self):
+        return len(self.freqs_exponent) * 2
+
+    def forward(self, x):
+        assert len(x.shape) >= 2
+
+        # Compute (2pi * 2^n) for n in freqs.
+        freqs_exponent = self.freqs_exponent.to(dtype=x.dtype, device=x.device)  # (F, )
+        freqs = 2.0**freqs_exponent * 2 * math.pi  # (F, )
+        freqs = freqs.view(-1, *([1] * (x.dim() - 1)))  # (F, 1, 1, ...)
+
+        # Compute (2pi * 2^n * x) for n in freqs.
+        features = freqs * x.unsqueeze(1)  # (B, F, X1, X2, ...)
+        features = features.flatten(1, 2)  # (B, F * C, X1, X2, ...)
+
+        # Output features are cos and sin of above. Shape (B, 2 * F * C, H, W).
+        return torch.cat([features.sin(), features.cos()], dim=1)
+    
+
+# ----------------------------------
 # Sinusoidal time embedding for gamma_t
 # ----------------------------------
 class TimeEmbedding(nn.Module):
@@ -154,14 +182,21 @@ class UNet(nn.Module):
         super().__init__()
 
         self.time_emb_dim = time_emb_dim
+
+        # Condition time embedding MLP
         self.time_mlp = nn.Sequential(
             TimeEmbedding(time_emb_dim),
             nn.Linear(time_emb_dim, time_emb_dim),
             nn.ReLU(inplace=True)
         )
 
+        # Fourier features on latent inputs
+        self.fourier_features = FourierFeatures() # remove this line to disable Fourier features
+
         # Encoder
-        self.enc1 = DoubleConv(in_channels, base_channels, time_emb_dim)
+        # Concatenate Fourier features to input for the channel dimension
+        total_input_ch = in_channels * (1 + self.fourier_features.num_features) 
+        self.enc1 = DoubleConv(total_input_ch, base_channels, time_emb_dim) # change this line to be in_channels to remove fourier features
         self.pool1 = nn.MaxPool2d(2)
         self.enc2 = DoubleConv(base_channels, base_channels*2, time_emb_dim)
         self.pool2 = nn.MaxPool2d(2)
@@ -190,6 +225,9 @@ class UNet(nn.Module):
         gamma_t: [B,1,1,1] or [B] diffusion time embedding
         """
         time_emb = self.time_mlp(gamma_t)  # [B, time_emb_dim]
+
+        # Concatenate Fourier features to input along channel dimension
+        x = torch.cat([x, self.fourier_features(x)], dim=1) # remove this line to disable Fourier features
 
         # Encoder
         e1 = self.enc1(x, time_emb)
