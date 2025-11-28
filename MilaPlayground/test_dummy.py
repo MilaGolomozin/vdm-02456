@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from VDM_Breakdown import VDM, FixedLinearSchedule, LearnedLinearSchedule  # import your implementation
+from research.VDM_Breakdown import VDM, FixedLinearSchedule, LearnedLinearSchedule  # import your implementation
 
 # ======= Define a tiny dummy model (the denoiser) =======
 #this is what the VDM class takes as argument and usually it is a U-Net

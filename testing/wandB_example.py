@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import random
 import wandb
-from VDM_Breakdown import VDM, FixedLinearSchedule, LearnedLinearSchedule
+from research.VDM_Breakdown import VDM, FixedLinearSchedule, LearnedLinearSchedule
 
 # ============ 1️⃣ Start W&B Run ============
 run = wandb.init(

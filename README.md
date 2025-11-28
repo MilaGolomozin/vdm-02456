@@ -24,7 +24,7 @@ vdm-02456/
 ├── VDM_our_implementation.py # Data transformations, forward process and loss training  
 ├── UNetModel.py # Time embedding and denoising model - passed into VDM_our_implementation.py  
 ├── research/ # Code documentation and analysis  
-├── testing/ # 2d VDM implementation and test input for CIFAR-10 forward pass and training  
+├── testing/ # 2d VDM implementation and test inputs for CIFAR-10 forward pass and training  
 └── README.md # Project documentation  
 
 

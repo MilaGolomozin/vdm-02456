@@ -1,8 +1,14 @@
+"""
+This was AI generated code for testing if the fourier features in UNetModel work as intended. 
+It extracts only the fourier features added and time embedding parts from the original UNetModel and 
+implements a UNet model with those features. The code is used for running a quick shape check to ensure that the output
+shape is as expected.
+"""
+
 import torch
 import torch.nn as nn
 import math
 
-## AI GENERATED TEST CODE FOR CHECKING IF FOURIER FEATURES WORKS AS INTENDED
 class FourierFeatures(nn.Module):
     def __init__(self, first: float = 5.0, last: float = 6.0, step: float = 1.0):
         super().__init__()

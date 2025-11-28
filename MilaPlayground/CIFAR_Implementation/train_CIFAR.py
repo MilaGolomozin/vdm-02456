@@ -24,8 +24,6 @@ run = wandb.init(
 )
 cfg = wandb.config
 
-
-
 transform = transforms.Compose([
     transforms.ToTensor(),   # -> [0,1]
 ])
@@ -44,6 +42,7 @@ train_loader = DataLoader(
     num_workers=4,
     pin_memory=True
 )
+
 val_dataset = datasets.CIFAR10(
     root="./data",
     train=False,       # test set
@@ -58,12 +57,15 @@ val_loader = DataLoader(
     num_workers=4,
     pin_memory=True
 )
+
 image_shape = (3, 32, 32)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Define UNet model
 model = UNet(in_channels=3).to(device)
 
+# Define VDM
 vdm = VDM(
     model=model,
     image_shape=image_shape,
@@ -71,7 +73,7 @@ vdm = VDM(
     gamma_max=5.0,
 ).to(device)
 
-#optimizer = optim.AdamW(model.parameters(), lr=1e-4)
+
 optimizer = optim.AdamW(
     model.parameters(),
     lr=5e-4,
@@ -79,6 +81,7 @@ optimizer = optim.AdamW(
     weight_decay=0.001,
     eps=1e-8
 )
+
 
 # EMA wrapper (same purpose as original implementation)
 ema = EMA(model, beta=0.9999)   # update after every step

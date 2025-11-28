@@ -326,6 +326,8 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 
 # ----- W&B Visualization helpers -----
+
+# Below was mainly developed by AI for logging various model aspects to W&B.
 def log_noise_schedule(model):
     ts = torch.linspace(0, 1, 200, device=device)
     with torch.no_grad():

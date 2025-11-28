@@ -1,10 +1,12 @@
+"""
+This was AI generated code for testing if the fourier features in UNetModel work as intended.
+"""
+
 import argparse
 import importlib.util
 from pathlib import Path
 
 import torch
-
-# AI GENERATED TEST CODE FOR CHECKING IF FOURIER FEATURES WORKS AS INTENDED
 
 # Load UNetFourier directly from file to avoid package/path issues
 THIS_DIR = Path(__file__).parent
