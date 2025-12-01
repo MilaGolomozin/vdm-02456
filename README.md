@@ -22,9 +22,11 @@ A general visualisation of the main function blocks of the code can be seen belo
 vdm-02456/  
 ├── train_CIFAR.py # Initialisation, evaluation and logging for CIFAR-10  
 ├── VDM_our_implementation.py # Data transformations, forward process and loss training  
-├── UNetModel.py # Time embedding and denoising model - passed into VDM_our_implementation.py  
-├── research/ # Code documentation and analysis  
+├── UNetModel.py # Time embedding and denoising model - passed into VDM_our_implementation.py 
+├── CIFAR_Implementation/ # 
+├── research/ # Existing code repository documentation and analysis  
 ├── testing/ # 2d VDM implementation and test inputs for CIFAR-10 forward pass and training  
+├── requirements.txt  
 └── README.md # Project documentation  
 
 
@@ -32,17 +34,20 @@ vdm-02456/
 
 ### Prerequisites
 - Python Version 3.9.21
-- Hardware/GPU requirements that we trained with
 
 ### Installation
-Help with this please
 ```bash
 # Clone the repository
 git clone https://github.com/MilaGolomozin/vdm-02456
 cd vdm-02456
 
-# Install dependencies <-- should we add this???
+# Install dependencies
 pip install -r requirements.txt
+
+# Create an account on WandB first. Follow: https://docs.wandb.ai/models/quickstart
+# WandB setup
+wandb login
+
 ```
 ## Results
 

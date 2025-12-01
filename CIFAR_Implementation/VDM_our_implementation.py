@@ -95,7 +95,7 @@ class VDM(nn.Module):
         Args:
             batch_size: int of number of times to sample
         Returns:
-            a tensor of size batch_size ofrandom times in [0,1]
+            a tensor of size batch_size of random times in [0,1]
         """
         times = torch.rand(batch_size, device=self.device, requires_grad=True)
         return times

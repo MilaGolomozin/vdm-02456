@@ -106,12 +106,13 @@ class UNet(nn.Module):
         )
 
         # Fourier features on latent inputs
-        self.fourier_features = FourierFeatures() # remove this line to disable Fourier features
+        # self.fourier_features = FourierFeatures() # remove this line to disable Fourier features
 
         # Encoder
-        # Concatenate Fourier features to input for the channel dimension
-        total_input_ch = in_channels * (1 + self.fourier_features.num_features) 
-        self.enc1 = DoubleConv(total_input_ch, base_channels, time_emb_dim) # change this line to be in_channels to remove fourier features
+        # Concatenate Fourier features to input for the channel dimension 
+        # Fourier features will not be used
+        # total_input_ch = in_channels * (1 + self.fourier_features.num_features) 
+        self.enc1 = DoubleConv(in_channels, base_channels, time_emb_dim) # change this line to be in_channels to remove fourier features
         self.pool1 = nn.MaxPool2d(2)
         self.enc2 = DoubleConv(base_channels, base_channels*2, time_emb_dim)
         self.pool2 = nn.MaxPool2d(2)
