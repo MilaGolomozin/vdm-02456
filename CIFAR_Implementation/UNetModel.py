@@ -1,92 +1,35 @@
-# import torch
-# import torch.nn as nn
-
-# #### UNET MODEL
-# class DoubleConv(nn.Module):
-#     """(Conv → BatchNorm → ReLU) * 2"""
-#     def __init__(self, in_channels, out_channels):
-#         super(DoubleConv, self).__init__()
-#         self.double_conv = nn.Sequential(
-#             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-#             nn.BatchNorm2d(out_channels),
-#             nn.ReLU(inplace=True),
-#             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
-#             nn.BatchNorm2d(out_channels),
-#             nn.ReLU(inplace=True)
-#         )
-
-#     def forward(self, x):
-#         return self.double_conv(x)
-
-# class UNet(nn.Module):
-#     def __init__(self, in_channels=3, out_channels=1):
-#         super(UNet, self).__init__()
-
-#         # Encoder (Contracting Path)
-#         self.enc1 = DoubleConv(in_channels, 64)
-#         self.pool1 = nn.MaxPool2d(2)
-#         self.enc2 = DoubleConv(64, 128)
-#         self.pool2 = nn.MaxPool2d(2)
-#         self.enc3 = DoubleConv(128, 256)
-#         self.pool3 = nn.MaxPool2d(2)
-#         self.enc4 = DoubleConv(256, 512)
-#         self.pool4 = nn.MaxPool2d(2)
-
-#         # Bottleneck
-#         self.bottleneck = DoubleConv(512, 1024)
-
-#         # Decoder (Expanding Path)
-#         self.upconv4 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
-#         self.dec4 = DoubleConv(1024, 512)
-
-#         self.upconv3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
-#         self.dec3 = DoubleConv(512, 256)
-
-#         self.upconv2 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-#         self.dec2 = DoubleConv(256, 128)
-
-#         self.upconv1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-#         self.dec1 = DoubleConv(128, 64)
-
-#         # Output layer
-#         self.output_conv = nn.Conv2d(64, out_channels, kernel_size=1)
-
-#     def forward(self, x):
-#         # Encoder
-#         e1 = self.enc1(x)
-#         e2 = self.enc2(self.pool1(e1))
-#         e3 = self.enc3(self.pool2(e2))
-#         e4 = self.enc4(self.pool3(e3))
-
-#         # Bottleneck
-#         b = self.bottleneck(self.pool4(e4))
-
-#         # Decoder
-#         d4 = self.upconv4(b)
-#         d4 = torch.cat((e4, d4), dim=1)  # skip connection
-#         d4 = self.dec4(d4)
-
-#         d3 = self.upconv3(d4)
-#         d3 = torch.cat((e3, d3), dim=1)
-#         d3 = self.dec3(d3)
-
-#         d2 = self.upconv2(d3)
-#         d2 = torch.cat((e2, d2), dim=1)
-#         d2 = self.dec2(d2)
-
-#         d1 = self.upconv1(d2)
-#         d1 = torch.cat((e1, d1), dim=1)
-#         d1 = self.dec1(d1)
-
-#         out = self.output_conv(d1)
-#         return out
-
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+
+# ----------------------------------
+# Fourier features applied to latent
+# ----------------------------------
+class FourierFeatures(nn.Module):
+    def __init__(self, first=7.0, last=8.0, step=1.0): # paper lists nmin = 7, and nmax = 8
+        super().__init__()
+        self.freqs_exponent = torch.arange(first, last + 1e-8, step)
+
+    @property
+    def num_features(self):
+        return len(self.freqs_exponent) * 2
+
+    def forward(self, x):
+        assert len(x.shape) >= 2
+
+        # Compute (2pi * 2^n) for n in freqs.
+        freqs_exponent = self.freqs_exponent.to(dtype=x.dtype, device=x.device)  # (F, )
+        freqs = 2.0**freqs_exponent * math.pi  # (F, ) // match the paper pi*2^n
+        freqs = freqs.view(-1, *([1] * (x.dim() - 1)))  # (F, 1, 1, ...)
+
+        # Compute (2pi * 2^n * x) for n in freqs.
+        features = freqs * x.unsqueeze(1)  # (B, F, X1, X2, ...)
+        features = features.flatten(1, 2)  # (B, F * C, X1, X2, ...)
+
+        # Output features are cos and sin of above. Shape (B, 2 * F * C, H, W).
+        return torch.cat([features.sin(), features.cos()], dim=1)
+    
 
 # ----------------------------------
 # Sinusoidal time embedding for gamma_t
@@ -154,14 +97,22 @@ class UNet(nn.Module):
         super().__init__()
 
         self.time_emb_dim = time_emb_dim
+
+        # Condition time embedding MLP
         self.time_mlp = nn.Sequential(
             TimeEmbedding(time_emb_dim),
             nn.Linear(time_emb_dim, time_emb_dim),
             nn.ReLU(inplace=True)
         )
 
+        # Fourier features on latent inputs
+        # self.fourier_features = FourierFeatures() # remove this line to disable Fourier features
+
         # Encoder
-        self.enc1 = DoubleConv(in_channels, base_channels, time_emb_dim)
+        # Concatenate Fourier features to input for the channel dimension 
+        # Fourier features will not be used
+        # total_input_ch = in_channels * (1 + self.fourier_features.num_features) 
+        self.enc1 = DoubleConv(in_channels, base_channels, time_emb_dim) # change this line to be in_channels to remove fourier features
         self.pool1 = nn.MaxPool2d(2)
         self.enc2 = DoubleConv(base_channels, base_channels*2, time_emb_dim)
         self.pool2 = nn.MaxPool2d(2)
@@ -190,6 +141,9 @@ class UNet(nn.Module):
         gamma_t: [B,1,1,1] or [B] diffusion time embedding
         """
         time_emb = self.time_mlp(gamma_t)  # [B, time_emb_dim]
+
+        # Concatenate Fourier features to input along channel dimension
+        x = torch.cat([x, self.fourier_features(x)], dim=1) # remove this line to disable Fourier features
 
         # Encoder
         e1 = self.enc1(x, time_emb)

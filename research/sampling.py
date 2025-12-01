@@ -1,8 +1,11 @@
+"""
+This file is AI generated and used as an example for VDM sampling implementation in PyTorch for a 2d toy dataset.
+"""
+
 import torch
 import torch.nn.functional as F
 import numpy as np
 from typing import List, Optional, Tuple, Dict
-
 
 @torch.no_grad()
 def sample_step(
