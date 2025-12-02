@@ -32,7 +32,13 @@ config_defaults = dict(
 
 
 def evaluate_vdm(vdm, dataloader, device):
-    """Compute negative ELBO only."""
+    """
+    Compute negative ELBO only.
+    vdm: VDM model
+    dataloader: DataLoader for evaluation data
+    device: torch device
+    returns: average negative ELBO over the dataset
+    """
     vdm.eval()
     total_loss = 0.0
     total_batches = 0

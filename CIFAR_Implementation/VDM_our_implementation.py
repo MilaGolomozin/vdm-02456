@@ -9,6 +9,12 @@ vocab_size=256
 ###____________________________
 
 class LinearGammaSchedule(nn.Module):
+    """Linear schedule for gamma(t) = gamma_min + t * (gamma_max - gamma_min)
+    
+        Attributes:
+            gamma_min: float, minimum gamma value at t=0
+            gamma_max: float, maximum gamma value at t=1
+    """
     def __init__(self, gamma_min, gamma_max):
         super().__init__()
         self.gamma_min = gamma_min
@@ -32,6 +38,13 @@ class LinearGammaSchedule(nn.Module):
 
 
 class VDM(nn.Module):
+    """ Variational Diffusion Model for discrete data.
+    Attributes:
+        model: nn.Module, the neural network model to predict noise
+        image_shape: tuple, shape of the input images (C, H, W)
+        gamma_min: float, minimum gamma value for fixed noise schedule
+        gamma_max: float, maximum gamma value for fixed noise schedule
+    """
     def __init__(self, model, image_shape, gamma_min, gamma_max):
         super().__init__()
         self.model = model
@@ -220,6 +233,11 @@ class VDM(nn.Module):
 
 
     def forward(self, x, *, noise=None):
+        """
+        x: [B,C,H,W] clean images in [-1,1]
+        noise: optional [B,C,H,W] noise to use for q(x_t | x
+        returns: tuple (loss, metrics)
+        """
         bpd_factor = 1 / (np.prod(x.shape[1:]) * np.log(2)) #converts the loss into bits-per-dimension.This is standard in generative modeling to report likelihood per pixel in bits (Appendix C in VDM paper).
         
         #Ensure the input is from -1 to 1

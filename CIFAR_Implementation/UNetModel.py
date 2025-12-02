@@ -7,6 +7,16 @@ import math
 # Fourier features applied to latent
 # ----------------------------------
 class FourierFeatures(nn.Module):
+    """
+    Fourier features mapping as described in the VDM paper.
+    Maps input x to a higher dimensional space using sinusoidal functions
+    of varying frequencies.
+
+    Attributes:
+        first: float, starting exponent for frequency calculation (2^first)
+        last: float, ending exponent for frequency calculation (2^last)
+        step: float, step size for exponent increments
+    """
     def __init__(self, first=7.0, last=8.0, step=1.0): # paper lists nmin = 7, and nmax = 8
         super().__init__()
         self.freqs_exponent = torch.arange(first, last + 1e-8, step)
@@ -16,6 +26,10 @@ class FourierFeatures(nn.Module):
         return len(self.freqs_exponent) * 2
 
     def forward(self, x):
+        """
+        x: [B, C, H, W] input tensor
+        returns: [B, C * num_features, H, W] Fourier features
+        """
         assert len(x.shape) >= 2
 
         # Compute (2pi * 2^n) for n in freqs.
@@ -35,11 +49,21 @@ class FourierFeatures(nn.Module):
 # Sinusoidal time embedding for gamma_t
 # ----------------------------------
 class TimeEmbedding(nn.Module):
+    """
+    Sinusoidal time embedding for gamma_t
+
+    Attributes:
+        dim: int, dimension of the time embedding
+    """
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
 
     def forward(self, gamma):
+        """
+        gamma: [B,1,1,1] or [B] diffusion time
+        returns: [B, dim] time embedding
+        """
         # gamma: [B,1,1,1] or [B]
         if len(gamma.shape) == 4:
             gamma = gamma.view(gamma.shape[0])
@@ -54,6 +78,13 @@ class TimeEmbedding(nn.Module):
 # FiLM modulation block
 # ----------------------------------
 class FiLMBlock(nn.Module):
+    """ 
+    FiLM modulation block with Conv2d, BatchNorm2d, ReLU and FiLM conditioning
+    Attributes:
+        in_channels: int, number of input channels
+        out_channels: int, number of output channels
+        time_emb_dim: int, dimension of the time embedding for FiLM
+    """
     def __init__(self, in_channels, out_channels, time_emb_dim):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
@@ -64,6 +95,11 @@ class FiLMBlock(nn.Module):
         self.time_mlp = nn.Linear(time_emb_dim, out_channels*2)
 
     def forward(self, x, time_emb):
+        """
+        x: [B, in_channels, H, W] input feature map
+        time_emb: [B, time_emb_dim] time embedding
+        returns: [B, out_channels, H, W] modulated feature map
+        """
         # time_emb: [B, time_emb_dim]
         gamma_beta = self.time_mlp(time_emb)  # [B, 2*out_channels]
         gamma, beta = gamma_beta.chunk(2, dim=1)
@@ -79,12 +115,24 @@ class FiLMBlock(nn.Module):
 # DoubleConv block
 # ----------------------------------
 class DoubleConv(nn.Module):
+    """
+    Double convolution block with two FiLM blocks
+    Attributes:
+        in_channels: int, number of input channels
+        out_channels: int, number of output channels
+        time_emb_dim: int, dimension of the time embedding for FiLM
+    """
     def __init__(self, in_channels, out_channels, time_emb_dim):
         super().__init__()
         self.block1 = FiLMBlock(in_channels, out_channels, time_emb_dim)
         self.block2 = FiLMBlock(out_channels, out_channels, time_emb_dim)
 
     def forward(self, x, time_emb):
+        """
+        x: [B, in_channels, H, W] input feature map
+        time_emb: [B, time_emb_dim] time embedding
+        returns: [B, out_channels, H, W] output feature map
+        """
         x = self.block1(x, time_emb)
         x = self.block2(x, time_emb)
         return x
@@ -93,6 +141,14 @@ class DoubleConv(nn.Module):
 # UNet for diffusion
 # ----------------------------------
 class UNet(nn.Module):
+    """
+    UNet architecture for diffusion model with FiLM conditioning and optional Fourier features
+    Attributes:
+        in_channels: int, number of input channels
+        out_channels: int, number of output channels
+        time_emb_dim: int, dimension of the time embedding for FiLM
+        base_channels: int, number of base channels for UNet
+    """
     def __init__(self, in_channels=3, out_channels=3, time_emb_dim=128, base_channels=64):
         super().__init__()
 
@@ -139,11 +195,12 @@ class UNet(nn.Module):
         """
         x: [B, C, H, W] input image
         gamma_t: [B,1,1,1] or [B] diffusion time embedding
+        returns: [B, C, H, W] output image
         """
         time_emb = self.time_mlp(gamma_t)  # [B, time_emb_dim]
 
         # Concatenate Fourier features to input along channel dimension
-        x = torch.cat([x, self.fourier_features(x)], dim=1) # remove this line to disable Fourier features
+        # x = torch.cat([x, self.fourier_features(x)], dim=1) # remove this line to disable Fourier features
 
         # Encoder
         e1 = self.enc1(x, time_emb)
