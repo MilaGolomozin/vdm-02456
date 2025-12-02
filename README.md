@@ -20,7 +20,7 @@ A general visualisation of the main function blocks of the code can be seen belo
 
 ## File Structure
 vdm-02456/  
-├── train_CIFAR.py # Initialisation, evaluation and logging for CIFAR-10  
+├── train_CIFAR_WandB.py # Initialisation, evaluation and logging for CIFAR-10  
 ├── VDM_our_implementation.py # Data transformations, forward process and loss training  
 ├── UNetModel.py # Time embedding and denoising model - passed into VDM_our_implementation.py 
 ├── CIFAR_Implementation/ # 
@@ -31,6 +31,7 @@ vdm-02456/
 
 
 ## Setup
+The model can be trained and evaluated from train_CIFAR_WandB.py once installed
 
 ### Prerequisites
 - Python Version 3.9.21
